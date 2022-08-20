@@ -27,29 +27,36 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import PersonIcon from '@mui/icons-material/Person';
 import VaccinesIcon from '@mui/icons-material/Vaccines';
+import AddIcon from '@mui/icons-material/Add';
+import EventIcon from '@mui/icons-material/Event';
+import FactCheckIcon from '@mui/icons-material/FactCheck';
 import MuiAppBar, { AppBarProps as MuiAppBarProps } from '@mui/material/AppBar';
-import { useRecoilState } from 'recoil';
+import { useRecoilState, useRecoilBridgeAcrossReactRoots_UNSTABLE } from 'recoil';
 import Web3Modal from 'web3modal';
 import { ethers } from 'ethers';
-import { txIdState, openState, userProfileState, disableItemState } from '../utils/recoil-helper';
+import { openState, userProfileState } from '../utils/recoil-helper';
 import { connectWalletHandler } from '../utils/wallet-helper';
 import { createUserProfileHandler } from './abi/User/createUserProfile';
 import { isExistingUserHandler } from './abi/User/isExistUser';
 import { getUserProfileHandler } from './abi/User/getUserProfile';
+import { getUserVaccineRecordHandler } from './abi/User/getUserVaccineRecord';
 import AppBar from '../components/appbar';
 import Drawer from '../components/drawer';
 import DrawerHeader from '../components/drawer-header';
 import React from 'react';
-import { encrtpyHandler, decrpytHandler } from '../utils/crypto';
+import Profile from '../containers/profile';
+import VaccineReader from '../containers/vaccine-reader';
+import VaccineCreator from '../containers/vaccine-creator';
+import VaccineChecker from '../containers/vaccine-checker';
+import EventJoiner from '../containers/event-joiner';
+import ReactDOM from 'react-dom';
 
 let web3Modal: Web3Modal;
 let web3Provider: ethers.providers.Web3Provider;
 let contract: ethers.Contract;
 
 const Home: NextPage = () => {
-  // const [walletAddress, setWalletAddress] = useRecoilState(walletAddressState);
   const [userProfile, setUserProfile] = useRecoilState(userProfileState);
-  const [disableItem, setDisableItem] = useRecoilState(disableItemState);
 
   const theme = useTheme();
   const [open, setOpen] = useRecoilState(openState);
@@ -64,16 +71,22 @@ const Home: NextPage = () => {
           userName: '',
           idNumber: '',
           birthDate: '',
+          records: [[], [], []],
+          isActive: false,
+          numVaccinations: 0,
         });
       });
       window.ethereum.on('accountsChanged', () => {
-        web3Modal.clearCachedProvider();
+        // web3Modal.clearCachedProvider();
         setUserProfile({
           walletAddress: '',
           walletAddressShorthand: '',
           userName: '',
           idNumber: '',
           birthDate: '',
+          records: [[], [], []],
+          isActive: false,
+          numVaccinations: 0,
         });
       });
     }
@@ -89,26 +102,30 @@ const Home: NextPage = () => {
     web3Provider = hWeb3Provider;
     contract = hContract;
     console.log(contract);
-    const address = hAddress;
     if (await isExistingUserHandler(contract)) {
-      const res = await getUserProfileHandler(contract, address);
+      const res = await getUserProfileHandler(contract, hAddress);
+      console.log(res);
+      const userVaccinesRecord = await getUserVaccineRecordHandler(contract);
       setUserProfile(
         Object.assign(
           {
-            walletAddress: address,
-            walletAddressShorthand: shorthandAddress(address),
+            walletAddress: hAddress,
+            walletAddressShorthand: shorthandAddress(hAddress),
+            records: userVaccinesRecord,
           },
           res,
         ),
       );
     } else {
-      setDisableItem(false);
       setUserProfile({
-        walletAddress: address,
-        walletAddressShorthand: shorthandAddress(address),
+        walletAddress: hAddress,
+        walletAddressShorthand: shorthandAddress(hAddress),
         userName: '',
         idNumber: '',
         birthDate: '',
+        records: [[], [], []],
+        isActive: false,
+        numVaccinations: 0,
       });
     }
   };
@@ -121,8 +138,10 @@ const Home: NextPage = () => {
       userName: '',
       idNumber: '',
       birthDate: '',
+      records: [[], [], []],
+      isActive: false,
+      numVaccinations: 0,
     });
-    setDisableItem(true);
   };
 
   const handleDrawerOpen = () => {
@@ -133,7 +152,7 @@ const Home: NextPage = () => {
     setOpen(false);
   };
 
-  let encryptWord: string;
+  const RecoilBridge = useRecoilBridgeAcrossReactRoots_UNSTABLE();
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -174,108 +193,151 @@ const Home: NextPage = () => {
         </DrawerHeader>
         <Divider />
         <List>
-          {['Profile', 'Vaccine Passport'].map((text, index) => (
-            <ListItem key={text} disablePadding sx={{ display: 'block' }}>
-              <ListItemButton
+          <ListItem key='Profile' disablePadding sx={{ display: 'block' }}>
+            <ListItemButton
+              sx={{
+                minHeight: 48,
+                justifyContent: open ? 'initial' : 'center',
+                px: 2.5,
+              }}
+              onClick={() => {
+                ReactDOM.render(
+                  <RecoilBridge>
+                    <Profile contract={contract} />
+                  </RecoilBridge>,
+                  document.getElementById('main')!,
+                );
+              }}>
+              <ListItemIcon
                 sx={{
-                  minHeight: 48,
-                  justifyContent: open ? 'initial' : 'center',
-                  px: 2.5,
-                }}
-                onClick={() => {
-                  console.log(text);
+                  minWidth: 0,
+                  mr: open ? 3 : 'auto',
+                  justifyContent: 'center',
                 }}>
-                <ListItemIcon
-                  sx={{
-                    minWidth: 0,
-                    mr: open ? 3 : 'auto',
-                    justifyContent: 'center',
-                  }}>
-                  {index % 2 === 0 ? <PersonIcon /> : <VaccinesIcon />}
-                </ListItemIcon>
-                <ListItemText primary={text} sx={{ opacity: open ? 1 : 0 }} />
-              </ListItemButton>
-            </ListItem>
-          ))}
+                <PersonIcon />
+              </ListItemIcon>
+              <ListItemText primary='Profile' sx={{ opacity: open ? 1 : 0 }} />
+            </ListItemButton>
+          </ListItem>
+          <ListItem key='VaccinePassport' disablePadding sx={{ display: 'block' }}>
+            <ListItemButton
+              sx={{
+                minHeight: 48,
+                justifyContent: open ? 'initial' : 'center',
+                px: 2.5,
+              }}
+              onClick={() => {
+                ReactDOM.render(
+                  <RecoilBridge>
+                    <VaccineReader contract={contract} />
+                  </RecoilBridge>,
+                  document.getElementById('main')!,
+                );
+              }}>
+              <ListItemIcon
+                sx={{
+                  minWidth: 0,
+                  mr: open ? 3 : 'auto',
+                  justifyContent: 'center',
+                }}>
+                <VaccinesIcon />
+              </ListItemIcon>
+              <ListItemText primary='VaccinePassport' sx={{ opacity: open ? 1 : 0 }} />
+            </ListItemButton>
+          </ListItem>
+          <ListItem key='EventJoiner' disablePadding sx={{ display: 'block' }}>
+            <ListItemButton
+              sx={{
+                minHeight: 48,
+                justifyContent: open ? 'initial' : 'center',
+                px: 2.5,
+              }}
+              onClick={() => {
+                ReactDOM.render(
+                  <RecoilBridge>
+                    <EventJoiner contract={contract} />
+                  </RecoilBridge>,
+                  document.getElementById('main')!,
+                );
+              }}>
+              <ListItemIcon
+                sx={{
+                  minWidth: 0,
+                  mr: open ? 3 : 'auto',
+                  justifyContent: 'center',
+                }}>
+                <EventIcon />
+              </ListItemIcon>
+              <ListItemText primary='EventJoiner' sx={{ opacity: open ? 1 : 0 }} />
+            </ListItemButton>
+          </ListItem>
         </List>
         <Divider />
+        <List>
+          <ListItem key='Creator' disablePadding sx={{ display: 'block' }}>
+            <ListItemButton
+              sx={{
+                minHeight: 48,
+                justifyContent: open ? 'initial' : 'center',
+                px: 2.5,
+              }}
+              onClick={() => {
+                ReactDOM.render(
+                  <RecoilBridge>
+                    <VaccineCreator contract={contract} />
+                  </RecoilBridge>,
+                  document.getElementById('main')!,
+                );
+              }}>
+              <ListItemIcon
+                sx={{
+                  minWidth: 0,
+                  mr: open ? 3 : 'auto',
+                  justifyContent: 'center',
+                }}>
+                <AddIcon />
+              </ListItemIcon>
+              <ListItemText primary='Creator' sx={{ opacity: open ? 1 : 0 }} />
+            </ListItemButton>
+          </ListItem>
+          <ListItem key='Checker' disablePadding sx={{ display: 'block' }}>
+            <ListItemButton
+              sx={{
+                minHeight: 48,
+                justifyContent: open ? 'initial' : 'center',
+                px: 2.5,
+              }}
+              onClick={() => {
+                ReactDOM.render(
+                  <RecoilBridge>
+                    <VaccineChecker contract={contract} />
+                  </RecoilBridge>,
+                  document.getElementById('main')!,
+                );
+              }}>
+              <ListItemIcon
+                sx={{
+                  minWidth: 0,
+                  mr: open ? 3 : 'auto',
+                  justifyContent: 'center',
+                }}>
+                <FactCheckIcon />
+              </ListItemIcon>
+              <ListItemText primary='Checker' sx={{ opacity: open ? 1 : 0 }} />
+            </ListItemButton>
+          </ListItem>
+        </List>
       </Drawer>
       <Box
         component='main'
+        id='main'
         sx={{
           alignItems: 'center',
           display: 'flex',
           flexGrow: 1,
           minHeight: '100%',
           p: 8,
-        }}>
-        <Container maxWidth='sm'>
-          <form>
-            <Box sx={{ my: 3 }}>
-              <Typography color='textPrimary' variant='h4'>
-                Your Profile
-              </Typography>
-            </Box>
-            <TextField
-              fullWidth
-              label='Wallet Address'
-              margin='normal'
-              name='address'
-              type='address'
-              value={userProfile.walletAddress}
-              variant='outlined'
-              disabled
-            />
-            <TextField
-              fullWidth
-              label='Name'
-              margin='normal'
-              name='userName'
-              type='text'
-              value={userProfile.userName}
-              onChange={(event) => {
-                setUserProfile({ ...userProfile, userName: event.target.value });
-              }}
-              variant='outlined'
-              disabled={disableItem}
-            />
-            <TextField
-              fullWidth
-              label='ID Number'
-              margin='normal'
-              name='idNumber'
-              type='text'
-              value={userProfile.idNumber}
-              onChange={(event) => {
-                setUserProfile({ ...userProfile, idNumber: event.target.value });
-              }}
-              variant='outlined'
-              disabled={disableItem}
-            />
-            <TextField
-              fullWidth
-              margin='normal'
-              name='birthDate'
-              type='date'
-              value={userProfile.birthDate}
-              onChange={(event) => {
-                setUserProfile({ ...userProfile, birthDate: event.target.value });
-              }}
-              variant='outlined'
-              disabled={disableItem}
-            />
-            <Button
-              variant='contained'
-              color='primary'
-              onClick={(event) => {
-                console.log(event);
-                createUserProfileHandler(contract, userProfile);
-              }}>
-              Submit
-            </Button>
-          </form>
-        </Container>
-      </Box>
+        }}></Box>
     </Box>
   );
 };

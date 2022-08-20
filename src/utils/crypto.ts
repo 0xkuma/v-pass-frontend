@@ -2,7 +2,7 @@ import { createCipheriv, randomBytes } from 'crypto';
 
 const algorithm = 'aes-256-ctr';
 
-const getSecretKey = async () => {
+export const getSecretKey =  () => {
   return '12345678123456781234567812345678';
 };
 

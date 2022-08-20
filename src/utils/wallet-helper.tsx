@@ -6,7 +6,7 @@ import VaccinePassport from '../common/VaccinePassport.json';
 const NETWORK = process.env.NETWORK || 'http://13.250.52.3:8545';
 const INFURA_ID = process.env.INFURA_ID || '30f1c72e308a458fa5a036dc887fa03b';
 const CONTRACT_ADDRESS =
-  process.env.CONTRACT_ADDRESS || '0xe2031199C6833F3aDdF6Fa90C7b7bf317D239b97';
+  process.env.CONTRACT_ADDRESS || '0x17E851F7F5c74558Bc07AE56D27C16179f7E595e';
 
 let hWeb3Modal: Web3Modal;
 const providerOptions = {

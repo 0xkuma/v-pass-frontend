@@ -5,6 +5,8 @@ interface UserProfile {
   userName: string;
   idNumber: string;
   birthDate: string;
+  isActive: boolean;
+  numVaccinations: number;
 }
 
 // for timestamp to 'yyyy-MM-dd' format
@@ -28,6 +30,8 @@ export const getUserProfileHandler = async (
     userName: await decrpytHandler(tx[0], address),
     idNumber: await decrpytHandler(tx[1], address),
     birthDate: formatDate(hexToDec(parseInt(await decrpytHandler(tx[2], address)))),
+    isActive: tx[3],
+    numVaccinations: hexToDec(parseInt(tx[4])),
   };
   return userProfile;
 };
